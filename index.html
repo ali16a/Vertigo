@@ -1,71 +1,115 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <title>Vertigo - مدیریت میزها</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vertigo - مدیریت میزهای بازی</title>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: 'Vazir', sans-serif;
       margin: 0;
       padding: 0;
-      direction: rtl;
       background: #f0f0f0;
       transition: background 0.4s, color 0.4s;
+      position: relative;
     }
 
-    body.dark {
+    body::before {
+      content: "VERTIGO";
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      font-size: 5rem;
+      color: rgba(0, 0, 0, 0.05);
+      z-index: 0;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .dark {
       background: #1e1e1e;
       color: #f5f5f5;
     }
 
     .container {
-      max-width: 800px;
+      max-width: 600px;
       margin: auto;
       padding: 1rem;
+      position: relative;
+      z-index: 1;
     }
 
     .table {
-      background: #fff;
+      background: white;
+      margin-bottom: 1rem;
       padding: 1rem;
       border-radius: 12px;
-      margin-bottom: 1rem;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      text-align: center;
       transition: background 0.4s, color 0.4s;
     }
 
-    body.dark .table {
+    .dark .table {
       background: #2c2c2c;
-      color: white;
     }
 
     button {
-      margin: 5px;
-      padding: 8px 12px;
+      padding: 0.5rem 1rem;
+      margin: 0.3rem;
       border: none;
       border-radius: 6px;
       background: #3498db;
       color: white;
       cursor: pointer;
+      transition: transform 0.2s ease, background 0.3s;
     }
 
     button:hover {
+      transform: scale(1.05);
       background: #2980b9;
+    }
+
+    .settled {
+      background: #2ecc71 !important;
     }
 
     #mode-toggle {
       position: fixed;
       top: 10px;
       left: 10px;
-      z-index: 100;
+      font-size: 1.4rem;
       background: none;
-      font-size: 1.5rem;
+      border: none;
+      cursor: pointer;
+      z-index: 100;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
     }
 
     #end-day {
-      background: #e74c3c;
       display: block;
       margin: 2rem auto;
+      background: #e74c3c;
+    }
+
+    #total {
+      text-align: center;
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+
+    #report {
+      margin-top: 1rem;
+      background: #f39c12;
+      padding: 0.5rem;
+      border-radius: 8px;
+      text-align: center;
     }
   </style>
 </head>
@@ -75,152 +119,147 @@
     <h1 style="text-align: center;">مدیریت میزهای بازی</h1>
     <div id="tables"></div>
     <button onclick="addTable()">افزودن میز جدید</button>
-    <div id="total">درآمد کل: <span id="total-income">0</span> تومان</div>
-    <div id="report">تسویه شده‌ها: <span id="report-total">0</span> تومان</div>
-    <button id="end-day" onclick="endDay()">پایان روز</button>
+    <div id="total">جمع درآمد امروز: <span id="total-income">0</span> تومان</div>
+    <div id="report">گزارش تسویه شده‌ها: <span id="report-total">0</span> تومان</div>
+    <button id="end-day" onclick="endDay()">پایان روز کاری</button>
   </div>
 
   <script>
     let tables = JSON.parse(localStorage.getItem("tables")) || [
       { id: 1, type: 'PS5', rate: 45000 },
-      { id: 2, type: 'بیلیارد', rate: 100000 }
+      { id: 2, type: 'PS5', rate: 45000 },
+      { id: 3, type: 'PS5', rate: 45000 },
+      { id: 4, type: 'PS5', rate: 45000 },
+      { id: 5, type: 'PS5', rate: 45000 },
+      { id: 6, type: 'بیلیارد', rate: 100000 }
     ];
 
-    let startTimes = JSON.parse(localStorage.getItem("startTimes")) || {};
     let totalIncome = parseInt(localStorage.getItem("totalIncome")) || 0;
     let reportTotal = parseInt(localStorage.getItem("reportTotal")) || 0;
-    let timers = {};
+    let startTimes = {};
 
     const tableContainer = document.getElementById('tables');
-    const totalIncomeEl = document.getElementById('total-income');
-    const reportTotalEl = document.getElementById('report-total');
+    const totalIncomeEl = document.getElementById("total-income");
+    const reportTotalEl = document.getElementById("report-total");
 
-    function save() {
+    function saveState() {
       localStorage.setItem("tables", JSON.stringify(tables));
-      localStorage.setItem("startTimes", JSON.stringify(startTimes));
       localStorage.setItem("totalIncome", totalIncome);
       localStorage.setItem("reportTotal", reportTotal);
     }
 
-    function formatDuration(ms) {
-      const mins = Math.floor(ms / 60000);
-      const secs = Math.floor((ms % 60000) / 1000);
-      return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    function renderTable(table) {
+      const div = document.createElement('div');
+      div.className = 'table';
+      div.id = `table-${table.id}`;
+      div.innerHTML = `
+        <h2>میز ${table.id} (${table.type})</h2>
+        <label>هزینه هر ساعت: <input type="number" id="rate-${table.id}" value="${table.rate}"></label><br>
+        <p>زمان شروع: <span id="start-${table.id}">--:--:--</span></p>
+        <p>زمان پایان: <span id="end-${table.id}">--:--:--</span></p>
+        <p>مدت: <span id="duration-${table.id}">0:00</span></p>
+        <p>هزینه: <span id="cost-${table.id}">0</span> تومان</p>
+        <button onclick="startGame(${table.id})">شروع</button>
+        <button onclick="endGame(${table.id})">پایان</button>
+        <button id="settle-${table.id}" onclick="settle(${table.id})">تسویه</button>
+      `;
+      tableContainer.appendChild(div);
     }
 
-    function render() {
-      tableContainer.innerHTML = '';
-      tables.forEach(table => {
-        const div = document.createElement('div');
-        div.className = 'table';
-        div.id = `table-${table.id}`;
-        div.innerHTML = `
-          <h2>میز ${table.id} (${table.type})</h2>
-          <label>نرخ (تومان/ساعت): <input type="number" value="${table.rate}" id="rate-${table.id}" /></label>
-          <p>شروع: <span id="start-${table.id}">--:--</span></p>
-          <p>پایان: <span id="end-${table.id}">--:--</span></p>
-          <p>مدت: <span id="duration-${table.id}">0:00</span></p>
-          <p>هزینه: <span id="cost-${table.id}">0</span> تومان</p>
-          <button onclick="startGame(${table.id})">شروع</button>
-          <button onclick="endGame(${table.id})">پایان</button>
-          <button onclick="settle(${table.id})">تسویه</button>
-        `;
-        tableContainer.appendChild(div);
-
-        if (startTimes[table.id]) {
-          document.getElementById(`start-${table.id}`).textContent = new Date(startTimes[table.id]).toLocaleTimeString();
-          startTimer(table.id);
-        }
-      });
-      totalIncomeEl.textContent = totalIncome.toLocaleString();
-      reportTotalEl.textContent = reportTotal.toLocaleString();
-    }
-
-    function startTimer(id) {
-      if (timers[id]) clearInterval(timers[id]);
-      timers[id] = setInterval(() => {
-        const start = new Date(startTimes[id]);
-        const now = new Date();
-        const diff = now - start;
-        document.getElementById(`duration-${id}`).textContent = formatDuration(diff);
-        const rate = parseInt(document.getElementById(`rate-${id}`).value);
-        const cost = Math.ceil((diff / 3600000) * rate);
-        document.getElementById(`cost-${id}`).textContent = cost.toLocaleString();
-      }, 1000);
-    }
+    tables.forEach(renderTable);
+    totalIncomeEl.textContent = totalIncome.toLocaleString();
+    reportTotalEl.textContent = reportTotal.toLocaleString();
 
     function startGame(id) {
-      startTimes[id] = new Date();
-      document.getElementById(`start-${id}`).textContent = new Date(startTimes[id]).toLocaleTimeString();
-      startTimer(id);
-      save();
+      const now = new Date();
+      startTimes[id] = now;
+      document.getElementById(`start-${id}`).textContent = now.toLocaleTimeString('fa-IR');
     }
 
     function endGame(id) {
-      if (!startTimes[id]) {
-        alert("لطفا ابتدا دکمه شروع را بزنید.");
+      const now = new Date();
+      const start = startTimes[id];
+      if (!start) {
+        alert('لطفاً ابتدا دکمه شروع را بزنید.');
         return;
       }
-      const end = new Date();
-      document.getElementById(`end-${id}`).textContent = end.toLocaleTimeString();
-      const start = new Date(startTimes[id]);
-      const diff = end - start;
+      document.getElementById(`end-${id}`).textContent = now.toLocaleTimeString('fa-IR');
+      const diffMs = now - start;
       const rate = parseInt(document.getElementById(`rate-${id}`).value);
-      const cost = Math.ceil((diff / 3600000) * rate);
+      const diffHours = diffMs / (1000 * 60 * 60);
+      const cost = Math.ceil(diffHours * rate);
+      document.getElementById(`cost-${id}`).textContent = cost.toLocaleString();
+      document.getElementById(`duration-${id}`).textContent = formatDuration(diffMs);
       totalIncome += cost;
       totalIncomeEl.textContent = totalIncome.toLocaleString();
-      clearInterval(timers[id]);
-      delete timers[id];
-      save();
+      saveState();
     }
 
     function settle(id) {
       const cost = parseInt(document.getElementById(`cost-${id}`).textContent.replace(/,/g, '')) || 0;
       reportTotal += cost;
       reportTotalEl.textContent = reportTotal.toLocaleString();
-      document.getElementById(`start-${id}`).textContent = '--:--';
-      document.getElementById(`end-${id}`).textContent = '--:--';
-      document.getElementById(`duration-${id}`).textContent = '0:00';
-      document.getElementById(`cost-${id}`).textContent = '0';
+      document.getElementById(`start-${id}`).textContent = "--:--:--";
+      document.getElementById(`end-${id}`).textContent = "--:--:--";
+      document.getElementById(`cost-${id}`).textContent = "0";
+      document.getElementById(`duration-${id}`).textContent = "0:00";
+      document.getElementById(`settle-${id}`).textContent = "تسویه شد";
+      document.getElementById(`settle-${id}`).classList.add("settled");
       delete startTimes[id];
-      clearInterval(timers[id]);
-      delete timers[id];
-      save();
+      saveState();
     }
 
     function addTable() {
-      const id = tables.length ? tables[tables.length - 1].id + 1 : 1;
-      tables.push({ id, type: 'PS5', rate: 45000 });
-      render();
-      save();
+      const type = prompt("نوع میز را وارد کنید (مثلاً PS5 یا بیلیارد):", "PS5");
+      if (!type) return;
+      const rate = type === 'بیلیارد' ? 100000 : 45000;
+      const newId = tables.length + 1;
+      const newTable = { id: newId, type, rate };
+      tables.push(newTable);
+      renderTable(newTable);
+      saveState();
+    }
+
+    function formatDuration(ms) {
+      const totalSeconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }
 
     function endDay() {
-      if (confirm("آیا از پاک کردن اطلاعات روز مطمئن هستید؟")) {
-        tables = [];
-        startTimes = {};
+      if (confirm("آیا از پایان روز کاری مطمئن هستید؟ مقادیر صفر می‌شوند.")) {
+        alert(`درآمد امروز گیم‌نت Vertigo: ${totalIncome.toLocaleString()} تومان\nروز کاری تمام شد.`);
         totalIncome = 0;
         reportTotal = 0;
-        localStorage.clear();
-        render();
+        localStorage.removeItem("tables");
+        localStorage.removeItem("totalIncome");
+        localStorage.removeItem("reportTotal");
+        location.reload();
       }
     }
 
-    // حالت تاریک
-    const modeBtn = document.getElementById('mode-toggle');
-    modeBtn.onclick = () => {
-      document.body.classList.toggle('dark');
-      modeBtn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
-      localStorage.setItem("darkMode", document.body.classList.contains('dark') ? "1" : "0");
-    };
+    // تم تاریک با حافظه localStorage
+    const toggle = document.getElementById("mode-toggle");
 
-    // بازیابی حالت تاریک
-    if (localStorage.getItem("darkMode") === "1") {
-      document.body.classList.add("dark");
-      modeBtn.textContent = "☀️";
+    function applyTheme() {
+      const theme = localStorage.getItem("theme");
+      if (theme === "dark") {
+        document.body.classList.add("dark");
+        toggle.textContent = "☀️";
+      } else {
+        document.body.classList.remove("dark");
+        toggle.textContent = "🌙";
+      }
     }
 
-    render();
+    applyTheme();
+
+    toggle.addEventListener("click", () => {
+      const isDark = document.body.classList.toggle("dark");
+      localStorage.setItem("theme", isDark ? "dark" : "light");
+      toggle.textContent = isDark ? "☀️" : "🌙";
+    });
   </script>
 </body>
 </html>
