@@ -5,154 +5,164 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vertigo - مدیریت میزهای بازی</title>
   <style>
-    :root {
-      --bg-color: #f0f0f0;
-      --text-color: #000;
-      --card-color: #fff;
-    }
-
-    body.dark {
-      --bg-color: #1e1e1e;
-      --text-color: #fff;
-      --card-color: #2c2c2c;
-    }
-
     body {
-      margin: 0;
       font-family: 'Tahoma', sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-color);
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.3s, color 0.3s;
+      position: relative;
+    }
+
+    :root {
+      --bg: #f0f0f0;
+      --text: #000;
+      --card: #fff;
+      --accent: #008080;
+    }
+
+    .dark {
+      --bg: #121212;
+      --text: #eee;
+      --card: #1e1e1e;
+      --accent: #00bcd4;
     }
 
     .watermark {
       position: fixed;
-      bottom: 20px;
+      top: 50%;
       left: 50%;
-      transform: translateX(-50%);
-      font-size: 5rem;
-      color: rgba(0,0,0,0.05);
-      z-index: 0;
+      font-size: 80px;
+      color: rgba(0, 0, 0, 0.03);
+      transform: translate(-50%, -50%);
       pointer-events: none;
+      z-index: 0;
+      user-select: none;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card);
+      padding: 10px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     #tables {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
-      padding: 1rem;
+      padding: 10px;
+      gap: 10px;
+      z-index: 1;
+      position: relative;
     }
 
     .table {
-      background: var(--card-color);
-      padding: 1rem;
+      background: var(--card);
+      padding: 10px;
       border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      position: relative;
-      z-index: 1;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
 
-    button {
-      padding: 0.5rem 1rem;
-      margin: 0.2rem;
+    .table button, .controls button {
+      margin-top: 5px;
+      padding: 5px 10px;
       border: none;
-      border-radius: 5px;
-      background-color: #4CAF50;
-      color: white;
+      border-radius: 6px;
       cursor: pointer;
+      background: var(--accent);
+      color: white;
     }
 
-    button:hover {
-      background-color: #45a049;
+    .settled {
+      background: gray !important;
+      cursor: default;
     }
 
     #total {
       text-align: center;
-      margin: 1rem;
-      font-size: 1.2rem;
+      margin: 20px 0;
+      font-weight: bold;
+      font-size: 1.2em;
     }
 
-    #bottom-controls {
-      position: fixed;
-      bottom: 0;
-      width: 100%;
-      background: var(--card-color);
-      padding: 0.5rem 1rem;
+    .controls {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
-      z-index: 10;
+      justify-content: center;
+      gap: 10px;
+      margin: 10px;
     }
 
-    #dark-toggle {
-      font-size: 1.5rem;
-      transition: transform 0.4s;
-      cursor: pointer;
-    }
-
-    #dark-toggle.rotate {
-      transform: rotate(180deg);
-    }
-
-    #add-table-btn {
+    .icon-btn {
       background: none;
       border: none;
-      font-size: 2rem;
+      font-size: 24px;
       cursor: pointer;
-      color: #4CAF50;
+      color: var(--accent);
+      transition: transform 0.3s;
     }
 
-    #popup-overlay {
-      display: none;
+    .icon-btn:hover {
+      transform: scale(1.2);
+    }
+
+    .modal {
       position: fixed;
-      z-index: 9999;
-      top: 0; left: 0;
-      width: 100%;
-      height: 100%;
+      top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.5);
-      justify-content: center;
+      display: none;
       align-items: center;
+      justify-content: center;
+      z-index: 999;
     }
 
-    #popup {
-      background: white;
-      padding: 2rem;
+    .modal-content {
+      background: var(--card);
+      padding: 20px;
       border-radius: 10px;
       text-align: center;
-      z-index: 99999;
     }
 
-    #popup h2 {
-      margin-bottom: 1rem;
+    @media (max-width: 600px) {
+      .table h2 { font-size: 1.1em; }
     }
   </style>
 </head>
 <body>
-  <div class="watermark">Vertigo</div>
+  <div class="watermark">VERTIGO</div>
+
+  <header>
+    <div class="controls">
+      <button class="icon-btn" onclick="addTable()">➕</button>
+    </div>
+    <div class="controls">
+      <button class="icon-btn" onclick="toggleDark()">🌙</button>
+    </div>
+  </header>
 
   <div id="tables"></div>
 
-  <div id="total">
-    جمع درآمد امروز: <span id="total-income">0</span> تومان
+  <div id="total">جمع درآمد امروز: <span id="total-income">0</span> تومان</div>
+
+  <div class="controls">
+    <button onclick="endDay()">پایان روز کاری</button>
   </div>
 
-  <div id="popup-overlay">
-    <div id="popup">
-      <h2 id="popup-title">درآمد امروز گیم‌نت ورتیگو</h2>
-      <p>مقدار: <span id="popup-income">0</span> تومان</p>
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <p id="summary"></p>
       <button onclick="confirmEndDay()">تأیید</button>
-      <button onclick="closePopup()">لغو</button>
+      <button onclick="document.getElementById('modal').style.display='none'">لغو</button>
     </div>
   </div>
 
-  <div id="bottom-controls">
-    <span id="dark-toggle" onclick="toggleDarkMode()">&#9790;</span>
-    <button onclick="endDay()">پایان روز کاری</button>
-    <button id="add-table-btn" onclick="addTable()">&#x2795;</button>
-  </div>
-
   <script>
-    let tables = [
+    let tables = JSON.parse(localStorage.getItem('tables')) || [
       { id: 1, type: 'PS5', rate: 45000 },
       { id: 2, type: 'PS5', rate: 45000 },
       { id: 3, type: 'PS5', rate: 45000 },
@@ -161,17 +171,15 @@
       { id: 6, type: 'بیلیارد', rate: 100000 }
     ];
 
-    let totalIncome = Number(localStorage.getItem('totalIncome')) || 0;
-    let startTimes = JSON.parse(localStorage.getItem('startTimes')) || {};
+    let state = JSON.parse(localStorage.getItem('state')) || {};
+    let darkMode = localStorage.getItem('darkMode') === 'true';
+    if (darkMode) document.body.classList.add('dark');
+
     const tableContainer = document.getElementById('tables');
-    const totalDisplay = document.getElementById('total-income');
+    let totalIncome = parseInt(localStorage.getItem('totalIncome')) || 0;
+    document.getElementById('total-income').textContent = totalIncome.toLocaleString();
 
-    function saveData() {
-      localStorage.setItem('totalIncome', totalIncome);
-      localStorage.setItem('startTimes', JSON.stringify(startTimes));
-    }
-
-    function renderTable(table, isDynamic = false) {
+    function renderTable(table) {
       const div = document.createElement('div');
       div.className = 'table';
       div.id = `table-${table.id}`;
@@ -179,123 +187,128 @@
         <h2>میز ${table.id} (${table.type})</h2>
         <label>هزینه هر ساعت: <input type="number" id="rate-${table.id}" value="${table.rate}"></label><br>
         <p>زمان شروع: <span id="start-${table.id}">--:--:--</span></p>
-        <p>مدت: <span id="duration-${table.id}">--:--</span></p>
+        <p>زمان پایان: <span id="end-${table.id}">--:--:--</span></p>
+        <p>مدت: <span id="duration-${table.id}">--:--:--</span></p>
         <p>هزینه: <span id="cost-${table.id}">0</span> تومان</p>
         <button onclick="startGame(${table.id})">شروع</button>
         <button onclick="endGame(${table.id})">پایان</button>
         <button id="settle-${table.id}" onclick="settle(${table.id})">تسویه</button>
-        ${isDynamic ? `<button onclick="removeTable(${table.id})">حذف</button>` : ''}
+        ${table.custom ? `<button onclick="removeTable(${table.id})">حذف</button>` : ''}
       `;
       tableContainer.appendChild(div);
-      if (startTimes[table.id]) {
-        document.getElementById(`start-${table.id}`).textContent = new Date(startTimes[table.id]).toLocaleTimeString('fa-IR');
-      }
+      updateUI(table.id);
     }
 
-    function updateTimers() {
-      for (const id in startTimes) {
-        const start = new Date(startTimes[id]);
-        const now = new Date();
-        const diffMs = now - start;
-        const mins = Math.floor(diffMs / 60000);
-        const hours = Math.floor(mins / 60);
-        const remMins = mins % 60;
-        const duration = `${hours.toString().padStart(2,'0')}:${remMins.toString().padStart(2,'0')}`;
-        const durEl = document.getElementById(`duration-${id}`);
-        if (durEl) durEl.textContent = duration;
-      }
+    function updateUI(id) {
+      const s = state[id];
+      if (!s) return;
+      if (s.start) document.getElementById(`start-${id}`).textContent = new Date(s.start).toLocaleTimeString('fa-IR');
+      if (s.end) document.getElementById(`end-${id}`).textContent = new Date(s.end).toLocaleTimeString('fa-IR');
+      if (s.cost) document.getElementById(`cost-${id}`).textContent = s.cost.toLocaleString();
     }
-    setInterval(updateTimers, 1000);
-
-    tables.forEach(t => renderTable(t));
-    totalDisplay.textContent = totalIncome.toLocaleString();
 
     function startGame(id) {
       const now = new Date();
-      startTimes[id] = now.toISOString();
-      document.getElementById(`start-${id}`).textContent = now.toLocaleTimeString('fa-IR');
-      saveData();
+      if (!state[id]) state[id] = {};
+      state[id].start = now;
+      state[id].end = null;
+      state[id].cost = 0;
+      saveState();
+      updateUI(id);
     }
 
     function endGame(id) {
       const now = new Date();
-      const start = new Date(startTimes[id]);
-      if (!startTimes[id]) {
-        alert("اول دکمه شروع را بزنید.");
-        return;
-      }
+      const start = new Date(state[id]?.start);
+      if (!start || isNaN(start)) return alert("ابتدا دکمه شروع را بزنید.");
       const rate = parseInt(document.getElementById(`rate-${id}`).value);
       const diffMs = now - start;
-      const diffHours = diffMs / (1000 * 60 * 60);
-      const cost = Math.ceil(diffHours * rate);
-      document.getElementById(`cost-${id}`).textContent = cost.toLocaleString();
+      const hours = diffMs / (1000 * 60 * 60);
+      const cost = Math.ceil(hours * rate);
+      state[id].end = now;
+      state[id].cost = cost;
       totalIncome += cost;
-      totalDisplay.textContent = totalIncome.toLocaleString();
-      saveData();
+      saveState();
+      updateUI(id);
+      document.getElementById("total-income").textContent = totalIncome.toLocaleString();
     }
 
     function settle(id) {
-      delete startTimes[id];
+      delete state[id];
       document.getElementById(`start-${id}`).textContent = "--:--:--";
-      document.getElementById(`duration-${id}`).textContent = "--:--";
+      document.getElementById(`end-${id}`).textContent = "--:--:--";
+      document.getElementById(`duration-${id}`).textContent = "--:--:--";
       document.getElementById(`cost-${id}`).textContent = "0";
       document.getElementById(`settle-${id}`).textContent = "تسویه شد";
-      document.getElementById(`settle-${id}`).disabled = true;
-      saveData();
+      document.getElementById(`settle-${id}`).classList.add("settled");
+      saveState();
     }
 
     function addTable() {
-      const newId = tables.length + Math.floor(Math.random() * 1000);
-      const type = prompt("نوع میز را وارد کنید (مثلاً PS5 یا بیلیارد):", "PS5");
-      let rate = type === 'بیلیارد' ? 100000 : 45000;
-      const newTable = { id: newId, type, rate };
+      const type = prompt("نوع میز را وارد کنید:", "PS5");
+      const rate = type === 'بیلیارد' ? 100000 : 45000;
+      const newId = Date.now();
+      const newTable = { id: newId, type, rate, custom: true };
       tables.push(newTable);
-      renderTable(newTable, true);
+      saveTables();
+      renderTable(newTable);
     }
 
     function removeTable(id) {
-      const el = document.getElementById(`table-${id}`);
-      if (el) el.remove();
-      delete startTimes[id];
-      saveData();
+      tables = tables.filter(t => t.id !== id);
+      delete state[id];
+      document.getElementById(`table-${id}`).remove();
+      saveState();
+      saveTables();
     }
 
     function endDay() {
-      document.getElementById("popup-income").textContent = totalIncome.toLocaleString();
-      document.getElementById("popup-overlay").style.display = 'flex';
+      document.getElementById('summary').textContent =
+        `درآمد امروز گیم‌نت Vertigo ${totalIncome.toLocaleString()} تومان بوده و روز کاری تمام شد.`;
+      document.getElementById('modal').style.display = 'flex';
     }
 
     function confirmEndDay() {
+      state = {};
       totalIncome = 0;
-      startTimes = {};
+      localStorage.removeItem('state');
       localStorage.removeItem('totalIncome');
-      localStorage.removeItem('startTimes');
-      document.getElementById('total-income').textContent = "0";
-      tableContainer.innerHTML = "";
-      tables.forEach(t => renderTable(t));
-      document.getElementById("popup-overlay").style.display = 'none';
+      location.reload();
     }
 
-    function closePopup() {
-      document.getElementById("popup-overlay").style.display = 'none';
+    function toggleDark() {
+      darkMode = !darkMode;
+      document.body.classList.toggle('dark');
+      localStorage.setItem('darkMode', darkMode);
     }
 
-    // Dark mode
-    function toggleDarkMode() {
-      const body = document.body;
-      body.classList.toggle("dark");
-      localStorage.setItem('darkMode', body.classList.contains("dark"));
-      document.getElementById("dark-toggle").classList.toggle("rotate");
+    function saveState() {
+      localStorage.setItem('state', JSON.stringify(state));
+      localStorage.setItem('totalIncome', totalIncome);
     }
 
-    // Apply dark mode from storage
-    window.addEventListener('DOMContentLoaded', () => {
-      const isDark = localStorage.getItem('darkMode') === 'true';
-      if (isDark) {
-        document.body.classList.add("dark");
-        document.getElementById("dark-toggle").classList.add("rotate");
+    function saveTables() {
+      localStorage.setItem('tables', JSON.stringify(tables));
+    }
+
+    function updateTimers() {
+      for (let id in state) {
+        const s = state[id];
+        if (s.start && !s.end) {
+          const now = new Date();
+          const diff = new Date(now - new Date(s.start));
+          const h = diff.getUTCHours().toString().padStart(2, '0');
+          const m = diff.getUTCMinutes().toString().padStart(2, '0');
+          const sec = diff.getUTCSeconds().toString().padStart(2, '0');
+          const duration = `${h}:${m}:${sec}`;
+          const span = document.getElementById(`duration-${id}`);
+          if (span) span.textContent = duration;
+        }
       }
-    });
+    }
+
+    setInterval(updateTimers, 1000);
+    tables.forEach(renderTable);
   </script>
 </body>
-</html>
+</html
