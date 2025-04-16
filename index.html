@@ -5,12 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vertigo - مدیریت میزهای بازی</title>
   <style>
+    :root {
+      --bg-color: #f0f0f0;
+      --text-color: #000;
+      --card-color: #fff;
+    }
+
+    body.dark {
+      --bg-color: #1e1e1e;
+      --text-color: #fff;
+      --card-color: #2c2c2c;
+    }
+
     body {
       margin: 0;
       font-family: 'Tahoma', sans-serif;
-      background: #f0f0f0;
-      position: relative;
+      background-color: var(--bg-color);
+      color: var(--text-color);
     }
+
     .watermark {
       position: fixed;
       bottom: 20px;
@@ -21,20 +34,23 @@
       z-index: 0;
       pointer-events: none;
     }
+
     #tables {
       display: flex;
       flex-direction: column;
       gap: 1rem;
       padding: 1rem;
     }
+
     .table {
-      background: white;
+      background: var(--card-color);
       padding: 1rem;
       border-radius: 10px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       position: relative;
       z-index: 1;
     }
+
     button {
       padding: 0.5rem 1rem;
       margin: 0.2rem;
@@ -44,14 +60,48 @@
       color: white;
       cursor: pointer;
     }
+
     button:hover {
       background-color: #45a049;
     }
-    #total, #controls {
+
+    #total {
       text-align: center;
       margin: 1rem;
       font-size: 1.2rem;
     }
+
+    #bottom-controls {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: var(--card-color);
+      padding: 0.5rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+      z-index: 10;
+    }
+
+    #dark-toggle {
+      font-size: 1.5rem;
+      transition: transform 0.4s;
+      cursor: pointer;
+    }
+
+    #dark-toggle.rotate {
+      transform: rotate(180deg);
+    }
+
+    #add-table-btn {
+      background: none;
+      border: none;
+      font-size: 2rem;
+      cursor: pointer;
+      color: #4CAF50;
+    }
+
     #popup-overlay {
       display: none;
       position: fixed;
@@ -63,12 +113,15 @@
       justify-content: center;
       align-items: center;
     }
+
     #popup {
       background: white;
       padding: 2rem;
       border-radius: 10px;
       text-align: center;
+      z-index: 99999;
     }
+
     #popup h2 {
       margin-bottom: 1rem;
     }
@@ -76,11 +129,6 @@
 </head>
 <body>
   <div class="watermark">Vertigo</div>
-
-  <div id="controls">
-    <button onclick="addTable()">افزودن میز جدید</button>
-    <button onclick="endDay()">پایان روز کاری</button>
-  </div>
 
   <div id="tables"></div>
 
@@ -95,6 +143,12 @@
       <button onclick="confirmEndDay()">تأیید</button>
       <button onclick="closePopup()">لغو</button>
     </div>
+  </div>
+
+  <div id="bottom-controls">
+    <span id="dark-toggle" onclick="toggleDarkMode()">&#9790;</span>
+    <button onclick="endDay()">پایان روز کاری</button>
+    <button id="add-table-btn" onclick="addTable()">&#x2795;</button>
   </div>
 
   <script>
@@ -117,7 +171,7 @@
       localStorage.setItem('startTimes', JSON.stringify(startTimes));
     }
 
-    function renderTable(table) {
+    function renderTable(table, isDynamic = false) {
       const div = document.createElement('div');
       div.className = 'table';
       div.id = `table-${table.id}`;
@@ -130,6 +184,7 @@
         <button onclick="startGame(${table.id})">شروع</button>
         <button onclick="endGame(${table.id})">پایان</button>
         <button id="settle-${table.id}" onclick="settle(${table.id})">تسویه</button>
+        ${isDynamic ? `<button onclick="removeTable(${table.id})">حذف</button>` : ''}
       `;
       tableContainer.appendChild(div);
       if (startTimes[table.id]) {
@@ -152,7 +207,7 @@
     }
     setInterval(updateTimers, 1000);
 
-    tables.forEach(renderTable);
+    tables.forEach(t => renderTable(t));
     totalDisplay.textContent = totalIncome.toLocaleString();
 
     function startGame(id) {
@@ -190,12 +245,19 @@
     }
 
     function addTable() {
-      const newId = tables.length + 1;
+      const newId = tables.length + Math.floor(Math.random() * 1000);
       const type = prompt("نوع میز را وارد کنید (مثلاً PS5 یا بیلیارد):", "PS5");
       let rate = type === 'بیلیارد' ? 100000 : 45000;
       const newTable = { id: newId, type, rate };
       tables.push(newTable);
-      renderTable(newTable);
+      renderTable(newTable, true);
+    }
+
+    function removeTable(id) {
+      const el = document.getElementById(`table-${id}`);
+      if (el) el.remove();
+      delete startTimes[id];
+      saveData();
     }
 
     function endDay() {
@@ -210,13 +272,30 @@
       localStorage.removeItem('startTimes');
       document.getElementById('total-income').textContent = "0";
       tableContainer.innerHTML = "";
-      tables.forEach(renderTable);
+      tables.forEach(t => renderTable(t));
       document.getElementById("popup-overlay").style.display = 'none';
     }
 
     function closePopup() {
       document.getElementById("popup-overlay").style.display = 'none';
     }
+
+    // Dark mode
+    function toggleDarkMode() {
+      const body = document.body;
+      body.classList.toggle("dark");
+      localStorage.setItem('darkMode', body.classList.contains("dark"));
+      document.getElementById("dark-toggle").classList.toggle("rotate");
+    }
+
+    // Apply dark mode from storage
+    window.addEventListener('DOMContentLoaded', () => {
+      const isDark = localStorage.getItem('darkMode') === 'true';
+      if (isDark) {
+        document.body.classList.add("dark");
+        document.getElementById("dark-toggle").classList.add("rotate");
+      }
+    });
   </script>
 </body>
 </html>
