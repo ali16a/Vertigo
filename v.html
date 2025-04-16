@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vertigo - مدیریت میزها</title>
+  <style>
+    :root {
+      --bg: #f9f9f9;
+      --text: #111;
+      --card-bg: #fff;
+      --shadow: rgba(0, 0, 0, 0.1);
+      --button: #007bff;
+      --button-hover: #0056b3;
+      --settled: #28a745;
+      --watermark: rgba(0, 0, 0, 0.05);
+    }
+
+    body.dark {
+      --bg: #1e1e1e;
+      --text: #f1f1f1;
+      --card-bg: #2b2b2b;
+      --shadow: rgba(255, 255, 255, 0.05);
+      --button: #4e9cff;
+      --button-hover: #2a76d2;
+      --settled: #45c16a;
+      --watermark: rgba(255, 255, 255, 0.03);
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "Vertigo";
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      font-size: 80px;
+      color: var(--watermark);
+      z-index: 0;
+      pointer-events: none;
+      white-space: nowrap;
+      animation: floatText 6s ease-in-out infinite alternate;
+    }
+
+    @keyframes floatText {
+      0%   { transform: translate(-50%, -50%) rotate(-30deg) scale(1); }
+      100% { transform: translate(-48%, -52%) rotate(-30deg) scale(1.05); }
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    #mode-toggle {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: transparent;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      z-index: 10;
+      transition: transform 0.5s ease;
+    }
+
+    #mode-toggle.rotate {
+      transform: rotate(180deg);
+    }
+
+    #tables {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .table {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px var(--shadow);
+      position: relative;
+      z-index: 1;
+      animation: fadeInUp 0.6s ease forwards;
+      opacity: 0;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .table h2 { margin: 0 0 10px; font-size: 18px; }
+    .table p { margin: 6px 0; font-size: 14px; }
+
+    .table input {
+      width: 100%;
+      margin-top: 4px;
+      padding: 6px;
+      font-size: 14px;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .btn-group {
+      margin-top: 10px;
+    }
+
+    .btn-group button {
+      padding: 8px 12px;
+      font-size: 14px;
+      margin: 4px 4px 0 0;
+      border: none;
+      border-radius: 8px;
+      background-color: var(--button);
+      color: white;
+      cursor: pointer;
+      transition: transform 0.2s, background-color 0.3s;
+    }
+
+    .btn-group button:hover {
+      background-color: var(--button-hover);
+      transform: scale(1.05);
+    }
+
+    .settled {
+      background-color: var(--settled) !important;
+    }
+
+    #total {
+      margin-top: 20px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    @media (max-width: 600px) {
+      .table h2 { font-size: 16px; }
+      .table p, input, button { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <button id="mode-toggle">🌙</button>
+  <h1>مدیریت میزهای بازی</h1>
+  <div id="tables"></div>
+  <div id="total">جمع درآمد امروز: <span id="total-income">0</span> تومان</div>
+
+  <script>
+    const tableData = JSON.parse(localStorage.getItem("tables")) || [
+      { id: 1, type: 'PS5', rate: 45000 },
+      { id: 2, type: 'PS5', rate: 45000 },
+      { id: 3, type: 'PS5', rate: 45000 },
+      { id: 4, type: 'PS5', rate: 45000 },
+      { id: 5, type: 'PS5', rate: 45000 },
+      { id: 6, type: 'بیلیارد', rate: 100000 }
+    ];
+
+    let totalIncome = parseInt(localStorage.getItem("income")) || 0;
+    let startTimes = JSON.parse(localStorage.getItem("startTimes")) || {};
+    let endTimes = JSON.parse(localStorage.getItem("endTimes")) || {};
+
+    const container = document.getElementById("tables");
+
+    function renderTable(table) {
+      const div = document.createElement("div");
+      div.className = "table";
+      div.id = `table-${table.id}`;
+      div.innerHTML = `
+        <h2>میز ${table.id} (${table.type})</h2>
+        <label>هزینه هر ساعت: <input type="number" id="rate-${table.id}" value="${table.rate}"></label>
+        <p>زمان شروع: <span id="start-${table.id}">${startTimes[table.id] ? new Date(startTimes[table.id]).toLocaleTimeString('fa-IR') : '--:--:--'}</span></p>
+        <p>زمان پایان: <span id="end-${table.id}">${endTimes[table.id] ? new Date(endTimes[table.id]).toLocaleTimeString('fa-IR') : '--:--:--'}</span></p>
+        <p>تایمر: <span id="timer-${table.id}">00:00:00</span></p>
+        <p>هزینه: <span id="cost-${table.id}">0</span> تومان</p>
+        <div class="btn-group">
+          <button onclick="startGame(${table.id})">شروع</button>
+          <button onclick="endGame(${table.id})">پایان</button>
+          <button id="settle-${table.id}" onclick="settle(${table.id})">تسویه</button>
+        </div>
+      `;
+      container.appendChild(div);
+    }
+
+    function startGame(id) {
+      const now = new Date();
+      startTimes[id] = now;
+      document.getElementById(`start-${id}`).textContent = now.toLocaleTimeString('fa-IR');
+      localStorage.setItem("startTimes", JSON.stringify(startTimes));
+    }
+
+    function endGame(id) {
+      if (!startTimes[id]) {
+        alert("لطفاً ابتدا دکمه شروع را بزنید.");
+        return;
+      }
+      const now = new Date();
+      endTimes[id] = now;
+      document.getElementById(`end-${id}`).textContent = now.toLocaleTimeString('fa-IR');
+      const rate = parseInt(document.getElementById(`rate-${id}`).value);
+      const diff = new Date(now) - new Date(startTimes[id]);
+      const hours = diff / (1000 * 60 * 60);
+      const cost = Math.ceil(hours * rate);
+      document.getElementById(`cost-${id}`).textContent = cost.toLocaleString();
+      totalIncome += cost;
+      document.getElementById("total-income").textContent = totalIncome.toLocaleString();
+      localStorage.setItem("income", totalIncome);
+      localStorage.setItem("endTimes", JSON.stringify(endTimes));
+    }
+
+    function settle(id) {
+      document.getElementById(`start-${id}`).textContent = "--:--:--";
+      document.getElementById(`end-${id}`).textContent = "--:--:--";
+      document.getElementById(`timer-${id}`).textContent = "00:00:00";
+      document.getElementById(`cost-${id}`).textContent = "0";
+      document.getElementById(`settle-${id}`).textContent = "تسویه شد";
+      document.getElementById(`settle-${id}`).classList.add("settled");
+      delete startTimes[id];
+      delete endTimes[id];
+      localStorage.setItem("startTimes", JSON.stringify(startTimes));
+      localStorage.setItem("endTimes", JSON.stringify(endTimes));
+    }
+
+    function updateTimers() {
+      for (let id in startTimes) {
+        if (endTimes[id]) continue;
+        const start = new Date(startTimes[id]);
+        const now = new Date();
+        const diff = now - start;
+        const h = Math.floor(diff / 3600000).toString().padStart(2, '0');
+        const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+        const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+        const timerEl = document.getElementById(`timer-${id}`);
+        if (timerEl) timerEl.textContent = `${h}:${m}:${s}`;
+      }
+    }
+
+    tableData.forEach(renderTable);
+    setInterval(updateTimers, 1000);
+    document.getElementById("total-income").textContent = totalIncome.toLocaleString();
+    localStorage.setItem("tables", JSON.stringify(tableData));
+
+    const toggleBtn = document.getElementById("mode-toggle");
+    toggleBtn.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+      toggleBtn.classList.toggle("rotate");
+      const mode = document.body.classList.contains("dark") ? "dark" : "light";
+      toggleBtn.textContent = mode === "dark" ? "☀️" : "🌙";
+      localStorage.setItem("mode", mode);
+    });
+
+    // load mode
+    window.addEventListener("load", () => {
+      const savedMode = localStorage.getItem("mode");
+      if (savedMode === "dark") {
+        document.body.classList.add("dark");
+        toggleBtn.textContent = "☀️";
+        toggleBtn.classList.add("rotate");
+      }
+    });
+  </script>
+</body>
+</html>
