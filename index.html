@@ -178,10 +178,17 @@
         .stop-btn:hover { background: #c82333; transform: scale(1.1); }
         .settle-btn:hover { background: #0056b3; transform: scale(1.1); }
 
-        .end-day-container {
+        .end-day-container, .daily-income, .settle-log {
             text-align: center;
             margin: 30px 0;
+            background: #fff;
             padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .dark-mode .end-day-container, .dark-mode .daily-income, .dark-mode .settle-log {
+            background: #2a2a2a;
         }
 
         #endDayButton {
@@ -192,9 +199,6 @@
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
         }
 
         #endDayButton:hover {
@@ -202,86 +206,9 @@
             transform: scale(1.05);
         }
 
-        /* دکمه پاپ‌آپ */
-        #popupButton {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-        }
-
-        #popupButton:hover {
-            background: #0056b3;
-            transform: scale(1.1);
-        }
-
-        /* پاپ‌آپ */
-        .popup {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.8);
-            background: #fff;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-            max-width: 500px;
-            width: 90%;
-            z-index: 1000;
-            animation: popupOpen 0.3s ease forwards;
-        }
-
-        .dark-mode .popup {
-            background: #2a2a2a;
-        }
-
-        @keyframes popupOpen {
-            to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-        }
-
-        .popup-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .daily-income h2, .settle-log h2 {
             margin-bottom: 15px;
-        }
-
-        .popup-header h2 {
             color: #007bff;
-            font-size: 1.5em;
-        }
-
-        #closePopup {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 5px;
-        }
-
-        #closePopup svg {
-            width: 24px;
-            height: 24px;
-        }
-
-        .daily-income, .settle-log {
-            margin-bottom: 20px;
-        }
-
-        .daily-income h3, .settle-log h3 {
-            color: #007bff;
-            margin-bottom: 10px;
         }
 
         #settleLog {
@@ -294,17 +221,6 @@
 
         .dark-mode #settleLog {
             border-color: #444;
-        }
-
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 999;
         }
     </style>
 </head>
@@ -334,6 +250,18 @@
         <div id="billiardsTables" class="tables-grid"></div>
     </div>
 
+    <!-- درآمد روزانه -->
+    <div class="daily-income">
+        <h2>درآمد روزانه</h2>
+        <p id="dailyIncome">0 تومان</p>
+    </div>
+
+    <!-- لاگ تسویه‌ها -->
+    <div class="settle-log">
+        <h2>لاگ تسویه‌ها</h2>
+        <div id="settleLog"></div>
+    </div>
+
     <!-- دکمه پایان روز -->
     <div class="end-day-container">
         <button id="endDayButton">
@@ -342,35 +270,6 @@
             </svg>
             پایان روز
         </button>
-    </div>
-
-    <!-- دکمه پاپ‌آپ -->
-    <button id="popupButton" title="نمایش درآمد و لاگ">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
-            <polyline points="13 2 13 9 20 9"/>
-        </svg>
-    </button>
-
-    <!-- پاپ‌آپ -->
-    <div class="overlay" id="popupOverlay"></div>
-    <div class="popup" id="popup">
-        <div class="popup-header">
-            <h2>گزارشات Vertigo</h2>
-            <button id="closePopup">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-            </button>
-        </div>
-        <div class="daily-income">
-            <h3>درآمد روزانه</h3>
-            <p id="dailyIncome">0 تومان</p>
-        </div>
-        <div class="settle-log">
-            <h3>لاگ تسویه‌ها</h3>
-            <div id="settleLog"></div>
-        </div>
     </div>
 
     <script>
@@ -384,7 +283,7 @@
             ],
             billiards: [
                 { id: 6, name: 'میز بیلیارد-1', active: false, startTime: null, endTime: null, elapsed: 0, rate: 100000, cost: 0 },
-                { id: 7, name: 'میز بیلیارد-2', active: false, startTime: null, endTime: null, elapsed: Jakar0, rate: 100000, cost: 0 },
+                { id: 7, name: 'میز بیلیارد-2', active: false, startTime: null, endTime: null, elapsed: 0, rate: 100000, cost: 0 },
                 { id: 8, name: 'میز بیلیارد-3', active: false, startTime: null, endTime: null, elapsed: 0, rate: 100000, cost: 0 }
             ]
         };
@@ -604,22 +503,6 @@
                 renderSettleLog();
                 saveState();
             }
-        });
-
-        // مدیریت پاپ‌آپ
-        document.getElementById('popupButton').addEventListener('click', () => {
-            document.getElementById('popup').style.display = 'block';
-            document.getElementById('popupOverlay').style.display = 'block';
-        });
-
-        document.getElementById('closePopup').addEventListener('click', () => {
-            document.getElementById('popup').style.display = 'none';
-            document.getElementById('popupOverlay').style.display = 'none';
-        });
-
-        document.getElementById('popupOverlay').addEventListener('click', () => {
-            document.getElementById('popup').style.display = 'none';
-            document.getElementById('popupOverlay').style.display = 'none';
         });
 
         // به‌روزرسانی تایمر
