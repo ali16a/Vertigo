@@ -17,6 +17,8 @@
             margin: 0 auto;
             padding: 20px;
             background: linear-gradient(135deg, #f4f4f4 0%, #e0e0e0 100%);
+            background-size: cover;
+            background-position: center;
             direction: rtl;
             transition: all 0.5s ease;
         }
@@ -29,6 +31,11 @@
         .dark-mode {
             background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
             color: #e0e0e0;
+        }
+
+        /* وقتی تصویر پس‌زمینه انتخاب شده، گرادیان حذف می‌شه */
+        body.custom-background {
+            background: none;
         }
 
         header {
@@ -50,7 +57,12 @@
             text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
-        #themeToggle {
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        #themeToggle, #backgroundSelectButton {
             background: none;
             border: none;
             cursor: pointer;
@@ -58,13 +70,17 @@
             transition: transform 0.3s;
         }
 
-        #themeToggle:hover {
+        #themeToggle:hover, #backgroundSelectButton:hover {
             transform: rotate(360deg);
         }
 
-        .theme-icon {
+        .theme-icon, .background-icon {
             width: 30px;
             height: 30px;
+        }
+
+        #backgroundInput {
+            display: none;
         }
 
         .tabs {
@@ -318,11 +334,21 @@
 <body dir="rtl" class="light-mode">
     <header>
         <h1>گیم کلاب Vertigo</h1>
-        <button id="themeToggle" title="تغییر تم">
-            <svg class="theme-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-            </svg>
-        </button>
+        <div class="header-buttons">
+            <button id="themeToggle" title="تغییر تم">
+                <svg class="theme-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+            </button>
+            <button id="backgroundSelectButton" title="انتخاب پس‌زمینه">
+                <svg class="background-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M16 16l-4-4-4 4"/>
+                </svg>
+            </button>
+            <input type="file" id="backgroundInput" accept="image/png,image/jpeg">
+        </div>
     </header>
 
     <!-- تب‌ها -->
@@ -454,6 +480,12 @@
                 });
                 dailyIncome = state.dailyIncome || 0;
                 settleLog = state.settleLog || [];
+            }
+            // بارگذاری پس‌زمینه
+            const savedBackground = localStorage.getItem('backgroundImage');
+            if (savedBackground) {
+                document.body.style.backgroundImage = `url(${savedBackground})`;
+                document.body.classList.add('custom-background');
             }
             // شروع تایمر جهانی اگر میز فعالی وجود داره
             Object.keys(tables).forEach(category => {
@@ -645,7 +677,29 @@
         document.getElementById('themeToggle').addEventListener('click', () => {
             document.body.classList.toggle('dark-mode');
             document.body.classList.toggle('light-mode');
-            localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+            // اگر پس‌زمینه سفارشی وجود داره، گرادیان اعمال نشه
+            if (!document.body.classList.contains('custom-background')) {
+                localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+            }
+        });
+
+        // انتخاب پس‌زمینه
+        document.getElementById('backgroundSelectButton').addEventListener('click', () => {
+            document.getElementById('backgroundInput').click();
+        });
+
+        document.getElementById('backgroundInput').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const imageData = e.target.result;
+                    document.body.style.backgroundImage = `url(${imageData})`;
+                    document.body.classList.add('custom-background');
+                    localStorage.setItem('backgroundImage', imageData);
+                };
+                reader.readAsDataURL(file);
+            }
         });
 
         // پایان روز
@@ -703,7 +757,7 @@
 
         // بارگذاری اولیه
         loadState();
-        if (localStorage.getItem('theme') === 'dark') {
+        if (localStorage.getItem('theme') === 'dark' && !document.body.classList.contains('custom-background')) {
             document.body.classList.add('dark-mode');
             document.body.classList.remove('light-mode');
         }
