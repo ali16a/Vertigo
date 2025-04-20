@@ -407,14 +407,13 @@
                 tables[category].forEach(table => {
                     if (table.active && table.startTime) {
                         activeTables++;
-                        table.elapsed = new Date() - table.startTime + table.elapsed;
-                        table.cost = calculateCost(table.elapsed, table.rate);
+                        // فقط زمان فعلی محاسبه می‌شه
+                        table.elapsed = new Date() - table.startTime;
                         const timerElement = document.getElementById(`timer-${table.id}`);
-                        const costElement = document.getElementById(`cost-${table.id}`);
-                        if (timerElement && costElement) {
+                        if (timerElement) {
                             timerElement.textContent = formatTime(table.elapsed);
-                            costElement.textContent = `${table.cost.toLocaleString('fa-IR')} تومان`;
                         }
+                        console.log(`میز ${table.name}: زمان = ${formatTime(table.elapsed)}`);
                     }
                 });
             });
@@ -523,13 +522,6 @@
         function updateRate(id, category, value) {
             const table = tables[category].find(t => t.id === id);
             table.rate = parseInt(value) || 0;
-            if (table.active) {
-                table.cost = calculateCost(table.elapsed, table.rate);
-                const costElement = document.getElementById(`cost-${id}`);
-                if (costElement) {
-                    costElement.textContent = `${table.cost.toLocaleString('fa-IR')} تومان`;
-                }
-            }
             saveState();
         }
 
@@ -546,11 +538,14 @@
                 table.active = true;
                 table.startTime = new Date();
                 table.endTime = null;
+                table.elapsed = 0;
                 const startElement = document.getElementById(`start-${id}`);
                 const endElement = document.getElementById(`end-${id}`);
-                if (startElement && endElement) {
+                const timerElement = document.getElementById(`timer-${id}`);
+                if (startElement && endElement && timerElement) {
                     startElement.textContent = table.startTime.toLocaleString('fa-IR');
                     endElement.textContent = '-';
+                    timerElement.textContent = formatTime(table.elapsed);
                 }
                 startGlobalTimer();
                 saveState();
@@ -562,7 +557,7 @@
             const table = tables[category].find(t => t.id === id);
             if (table.active) {
                 table.active = false;
-                table.elapsed = new Date() - table.startTime + table.elapsed;
+                table.elapsed = new Date() - table.startTime;
                 table.endTime = new Date();
                 table.cost = calculateCost(table.elapsed, table.rate);
                 const endElement = document.getElementById(`end-${id}`);
@@ -580,6 +575,15 @@
         // تسویه
         function settleTable(id, category) {
             const table = tables[category].find(t => t.id === id);
+            if (!table.active && table.elapsed === 0 && table.cost === 0) {
+                alert('میز قبلاً تسویه شده یا هنوز استفاده نشده است.');
+                return;
+            }
+            // اگر میز فعاله، اول هزینه رو محاسبه می‌کنیم
+            if (table.active) {
+                table.elapsed = new Date() - table.startTime;
+                table.cost = calculateCost(table.elapsed, table.rate);
+            }
             if (confirm(`آیا می‌خواهید میز ${table.name} را تسویه کنید؟ هزینه: ${table.cost.toLocaleString('fa-IR')} تومان`)) {
                 table.active = false;
                 dailyIncome += table.cost;
