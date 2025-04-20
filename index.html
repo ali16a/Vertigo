@@ -28,20 +28,28 @@
     .tabs {
       display: flex;
       justify-content: center;
-      margin-bottom: 1rem;
+      margin: 1rem 0;
+      gap: 1rem;
     }
 
     .tab {
       padding: 10px 20px;
-      margin: 0 5px;
-      border-radius: 8px;
-      background: #ccc;
+      border-radius: 20px;
+      background: #ddd;
       cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+
+    .tab:hover {
+      background: #bbb;
+      transform: scale(1.05);
     }
 
     .tab.active {
       background: #3498db;
       color: white;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
 
     .grid {
@@ -55,12 +63,21 @@
       padding: 1rem;
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      transition: background 0.4s, color 0.4s;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeIn 0.5s forwards;
     }
 
     body.dark .table {
       background: #2c2c2c;
       color: white;
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     button {
@@ -71,6 +88,7 @@
       background: #3498db;
       color: white;
       cursor: pointer;
+      transition: background 0.3s;
     }
 
     button:hover {
@@ -101,31 +119,30 @@
   <div class="container">
     <h1 style="text-align: center;">مدیریت میزهای بازی</h1>
 
-    <!-- Tabs -->
     <div class="tabs">
-      <div class="tab active" data-tab="all">همه</div>
-      <div class="tab" data-tab="PS5">PS5</div>
-      <div class="tab" data-tab="بیلیارد">بیلیارد</div>
+      <div class="tab active" data-tab="all" onclick="filterTables('all')">همه</div>
+      <div class="tab" data-tab="PS5" onclick="filterTables('PS5')">PS5</div>
+      <div class="tab" data-tab="بیلیارد" onclick="filterTables('بیلیارد')">بیلیارد</div>
     </div>
 
-    <!-- Tables -->
     <div id="tables" class="grid"></div>
 
+    <button onclick="addTable()">افزودن میز جدید</button>
     <div id="total">درآمد کل: <span id="total-income">0</span> تومان</div>
     <div id="report">تسویه شده‌ها: <span id="report-total">0</span> تومان</div>
     <button id="end-day" onclick="endDay()">پایان روز</button>
   </div>
 
   <script>
-    let tables = [
+    let tables = JSON.parse(localStorage.getItem("tables")) || [
       { id: 1, type: 'PS5', rate: 45000 },
-      { id: 2, type: 'PS5', rate: 45000 },
+      { id: 2, type: 'بیلیارد', rate: 100000 },
       { id: 3, type: 'PS5', rate: 45000 },
       { id: 4, type: 'PS5', rate: 45000 },
       { id: 5, type: 'PS5', rate: 45000 },
       { id: 6, type: 'بیلیارد', rate: 100000 },
       { id: 7, type: 'بیلیارد', rate: 100000 },
-      { id: 8, type: 'بیلیارد', rate: 100000 }
+      { id: 8, type: 'PS5', rate: 45000 }
     ];
 
     let startTimes = JSON.parse(localStorage.getItem("startTimes")) || {};
@@ -138,6 +155,7 @@
     const reportTotalEl = document.getElementById('report-total');
 
     function save() {
+      localStorage.setItem("tables", JSON.stringify(tables));
       localStorage.setItem("startTimes", JSON.stringify(startTimes));
       localStorage.setItem("totalIncome", totalIncome);
       localStorage.setItem("reportTotal", reportTotal);
@@ -149,12 +167,13 @@
       return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     }
 
-    function renderTables() {
+    function render() {
       tableContainer.innerHTML = '';
       tables.forEach(table => {
         const div = document.createElement('div');
-        div.className = `table`;
+        div.className = 'table';
         div.dataset.type = table.type;
+        div.id = `table-${table.id}`;
         div.innerHTML = `
           <h2>میز ${table.id} (${table.type})</h2>
           <label>نرخ (تومان/ساعت): <input type="number" value="${table.rate}" id="rate-${table.id}" /></label>
@@ -173,24 +192,8 @@
           startTimer(table.id);
         }
       });
-
       totalIncomeEl.textContent = totalIncome.toLocaleString();
       reportTotalEl.textContent = reportTotal.toLocaleString();
-    }
-
-    function filterTables(type) {
-      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-      document.querySelector(`.tab[data-tab="${type}"]`).classList.add('active');
-
-      document.querySelectorAll('.table').forEach(el => {
-        if (type === "all") {
-          el.classList.remove("hidden");
-        } else if (el.dataset.type === type) {
-          el.classList.remove("hidden");
-        } else {
-          el.classList.add("hidden");
-        }
-      });
     }
 
     function startTimer(id) {
@@ -245,21 +248,38 @@
       save();
     }
 
+    function addTable() {
+      const id = tables.length ? tables[tables.length - 1].id + 1 : 1;
+      tables.push({ id, type: 'PS5', rate: 45000 });
+      render();
+      save();
+    }
+
     function endDay() {
-      if (confirm("آیا از پاک‌سازی اطلاعات روز مطمئن هستید؟")) {
+      if (confirm("آیا از پاک کردن اطلاعات روز مطمئن هستید؟")) {
+        tables = [];
         startTimes = {};
         totalIncome = 0;
         reportTotal = 0;
-        for (const id in timers) {
-          clearInterval(timers[id]);
-        }
-        timers = {};
-        save();
-        renderTables();
+        localStorage.clear();
+        render();
       }
     }
 
-    // Dark mode toggle
+    function filterTables(type) {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.querySelector(`.tab[data-tab="${type}"]`).classList.add('active');
+
+      document.querySelectorAll('.table').forEach(el => {
+        el.classList.add('hidden');
+        void el.offsetWidth;
+        if (type === "all" || el.dataset.type === type) {
+          el.classList.remove("hidden");
+          el.style.animation = "fadeIn 0.5s forwards";
+        }
+      });
+    }
+
     const modeBtn = document.getElementById('mode-toggle');
     modeBtn.onclick = () => {
       document.body.classList.toggle('dark');
@@ -272,16 +292,7 @@
       modeBtn.textContent = "☀️";
     }
 
-    // Init
-    renderTables();
-    filterTables('all');
-
-    document.querySelectorAll('.tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        const type = tab.dataset.tab;
-        filterTables(type);
-      });
-    });
+    render();
   </script>
 </body>
 </html
